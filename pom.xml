@@ -30,7 +30,9 @@
     <dependency>
       <groupId>com.bitwig</groupId>
       <artifactId>extension-api</artifactId>
-      <version>25</version>
+      <!-- Floor version: Bitwig 6.0.x rejects extensions requiring the 6.1-cycle API 25.
+           Compiling against 18 makes the compiler catch any accidental use of newer API. -->
+      <version>18</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>

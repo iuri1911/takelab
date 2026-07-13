@@ -43,7 +43,8 @@ public class QuickRetakeExtensionDefinition extends ControllerExtensionDefinitio
 
     @Override
     public int getRequiredAPIVersion() {
-        return 25;
+        // Bitwig 6.0.x does not accept the 6.1-cycle API 25; every method used exists by API 18.
+        return 18;
     }
 
     @Override
