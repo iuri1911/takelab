@@ -1,25 +1,26 @@
-package dev.iuri.quickretake;
+package io.iuri.takelab;
 
 import java.util.function.Consumer;
 
 import com.bitwig.extension.controller.ControllerExtension;
 import com.bitwig.extension.controller.api.Application;
 import com.bitwig.extension.controller.api.ControllerHost;
+import com.bitwig.extension.controller.api.DocumentState;
 import com.bitwig.extension.controller.api.HardwareSurface;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extension.controller.api.Transport;
 
-import dev.iuri.quickretake.engine.ArrangerRetake;
-import dev.iuri.quickretake.engine.CompingMode;
-import dev.iuri.quickretake.engine.LauncherRetake;
-import dev.iuri.quickretake.engine.RecordingContext;
-import dev.iuri.quickretake.engine.RecordingMonitor;
-import dev.iuri.quickretake.engine.StepRunner;
-import dev.iuri.quickretake.gesture.TapGestureDetector;
-import dev.iuri.quickretake.settings.RetakeSettings;
-import dev.iuri.quickretake.trigger.MidiTrigger;
+import io.iuri.takelab.engine.ArrangerRetake;
+import io.iuri.takelab.engine.CompingMode;
+import io.iuri.takelab.engine.LauncherRetake;
+import io.iuri.takelab.engine.RecordingContext;
+import io.iuri.takelab.engine.RecordingMonitor;
+import io.iuri.takelab.engine.StepRunner;
+import io.iuri.takelab.gesture.TapGestureDetector;
+import io.iuri.takelab.settings.RetakeSettings;
+import io.iuri.takelab.trigger.MidiTrigger;
 
-public class QuickRetakeExtension extends ControllerExtension {
+public class TakeLabExtension extends ControllerExtension {
 
     private static final int NUM_TRACKS = 32;
     private static final int NUM_SCENES = 32;
@@ -29,7 +30,7 @@ public class QuickRetakeExtension extends ControllerExtension {
     private ArrangerRetake arrangerRetake;
     private LauncherRetake launcherRetake;
 
-    protected QuickRetakeExtension(QuickRetakeExtensionDefinition definition, ControllerHost host) {
+    protected TakeLabExtension(TakeLabExtensionDefinition definition, ControllerHost host) {
         super(definition, host);
         numMidiInPorts = definition.getNumMidiInPorts();
     }
@@ -38,7 +39,8 @@ public class QuickRetakeExtension extends ControllerExtension {
     public void init() {
         final ControllerHost host = getHost();
 
-        final RetakeSettings settings = new RetakeSettings(host.getPreferences());
+        final DocumentState documentState = host.getDocumentState();
+        final RetakeSettings settings = new RetakeSettings(host.getPreferences(), documentState);
 
         final Transport transport = host.createTransport();
         transport.isPlaying().markInterested();
@@ -56,13 +58,14 @@ public class QuickRetakeExtension extends ControllerExtension {
         arrangerRetake = new ArrangerRetake(host, transport, application, monitor, settings, runner);
         launcherRetake = new LauncherRetake(host, transport, monitor, settings, runner);
 
-        final CompingMode comping = new CompingMode(host, transport, trackBank, settings, runner);
+        final CompingMode comping =
+                new CompingMode(host, transport, trackBank, settings, runner, documentState);
 
         final Runnable lateUndo = () -> {
             transport.stop();
             application.undo();
             if (settings.showNotifications()) {
-                host.showPopupNotification("QuickRetake: late undo (last take removed)");
+                host.showPopupNotification("TakeLab: late undo (last take removed)");
             }
         };
         final TapGestureDetector detector = new TapGestureDetector(host, transport, settings,
@@ -73,8 +76,8 @@ public class QuickRetakeExtension extends ControllerExtension {
             new MidiTrigger(host, surface, settings, detector::onExternalTrigger);
         }
 
-        host.println("[QR] QuickRetake 0.1.0 ready");
-        host.showPopupNotification("QuickRetake loaded");
+        host.println("[TL] TakeLab 0.2.0 ready");
+        host.showPopupNotification("TakeLab loaded");
     }
 
     private void executeRetake(RecordingContext ctx, Consumer<Boolean> onDone) {
@@ -87,7 +90,7 @@ public class QuickRetakeExtension extends ControllerExtension {
 
     @Override
     public void exit() {
-        getHost().println("[QR] exit");
+        getHost().println("[TL] exit");
     }
 
     @Override

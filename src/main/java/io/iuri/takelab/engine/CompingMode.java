@@ -1,4 +1,4 @@
-package dev.iuri.quickretake.engine;
+package io.iuri.takelab.engine;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,16 +10,19 @@ import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extension.controller.api.Transport;
 
-import dev.iuri.quickretake.settings.RetakeSettings;
+import io.iuri.takelab.settings.RetakeSettings;
 
 /**
  * MIDI comping via take lanes: the user arms N tracks ("lanes", typically note
  * tracks routed to one instrument track), sets the arranger loop over the
  * passage, and hits Start in the Studio I/O panel. Recording rolls in a loop
  * and on every loop wrap the record-arm rotates to the next lane, so each pass
- * lands on its own track. Audition buttons cycle an exclusive solo per lane.
+ * lands on its own track. Only the active lane is audible (mute-based, so the
+ * rest of the project keeps playing). Audition cycles which lane is unmuted.
  *
- * Controls live in the Studio I/O panel (DocumentState settings, per-project).
+ * The session ends when the user presses Stop in the panel OR stops the
+ * transport by any means; both restore every touched state (arm, mute,
+ * overdub, loop toggle) and clear automation overrides.
  */
 public class CompingMode {
 
@@ -31,13 +34,20 @@ public class CompingMode {
 
     private final List<Integer> lanes = new ArrayList<>();
     private boolean active;
+    /** True between Start and the moment recording actually rolls; suppresses
+     * the auto-finish that would otherwise trigger on our own initial stop(). */
+    private boolean starting;
     private int currentLane;
     private int auditionLane = -1;
     private double lastPlayPos = Double.NEGATIVE_INFINITY;
-    private Boolean savedOverdub;
+
+    private boolean[] savedArm = new boolean[0];
+    private boolean[] savedMute = new boolean[0];
+    private boolean savedOverdub;
+    private boolean savedLoopEnabled;
 
     public CompingMode(ControllerHost host, Transport transport, TrackBank trackBank,
-            RetakeSettings settings, StepRunner runner) {
+            RetakeSettings settings, StepRunner runner, DocumentState doc) {
         this.host = host;
         this.transport = transport;
         this.trackBank = trackBank;
@@ -58,14 +68,14 @@ public class CompingMode {
         }
 
         transport.playPosition().addValueObserver(this::onPlayPosition);
+        transport.isPlaying().addValueObserver(this::onPlayingChanged);
 
-        final DocumentState doc = host.getDocumentState();
         final Signal start = doc.getSignalSetting("Armed tracks become lanes", "MIDI Comping", "Start");
-        final Signal stop = doc.getSignalSetting("Stop and keep lanes", "MIDI Comping", "Stop");
+        final Signal stop = doc.getSignalSetting("End session, restore state", "MIDI Comping", "Stop");
         final Signal audition = doc.getSignalSetting("Cycle audible lane", "MIDI Comping", "Audition next lane");
-        final Signal unmute = doc.getSignalSetting("Unmute all lanes", "MIDI Comping", "Unmute all");
+        final Signal unmute = doc.getSignalSetting("Unmute lanes, clear overrides", "MIDI Comping", "Unmute all");
         start.addSignalObserver(this::start);
-        stop.addSignalObserver(this::stop);
+        stop.addSignalObserver(this::stopRequested);
         audition.addSignalObserver(this::auditionNext);
         unmute.addSignalObserver(this::unmuteAllLanes);
     }
@@ -86,18 +96,28 @@ public class CompingMode {
             }
         }
         if (lanes.size() < 2) {
-            host.showPopupNotification("QuickRetake comping: arm 2+ lane tracks first");
+            host.showPopupNotification("TakeLab comping: arm 2+ lane tracks first");
             return;
         }
 
+        // Snapshot everything the session will touch, to restore on finish.
+        savedArm = new boolean[lanes.size()];
+        savedMute = new boolean[lanes.size()];
+        for (int i = 0; i < lanes.size(); i++) {
+            final Track track = trackBank.getItemAt(lanes.get(i));
+            savedArm[i] = track.arm().get();
+            savedMute[i] = track.mute().get();
+        }
+        savedOverdub = transport.isArrangerOverdubEnabled().get();
+        savedLoopEnabled = transport.isArrangerLoopEnabled().get();
+
         active = true;
+        starting = true;
         currentLane = 0;
         auditionLane = -1;
         lastPlayPos = Double.NEGATIVE_INFINITY;
 
-        // Re-entering a lane must REPLACE its previous take, not stack notes on
-        // top of it: arranger overdub off for the whole comping session.
-        savedOverdub = transport.isArrangerOverdubEnabled().get();
+        // Re-entering a lane must REPLACE its previous take, not stack notes.
         transport.isArrangerOverdubEnabled().set(false);
 
         final double loopStart = transport.arrangerLoopStart().get();
@@ -112,7 +132,20 @@ public class CompingMode {
         runner.run(settings.stepDelayMs(), steps, () ->
                 host.showPopupNotification("Comping: recording lane 1/" + lanes.size()
                         + " (" + laneName(0) + ")"));
-        host.println("[QR] comping start, lanes=" + lanes);
+        host.println("[TL] comping start, lanes=" + lanes);
+    }
+
+    private void onPlayingChanged(boolean playing) {
+        if (!active) {
+            return;
+        }
+        if (playing) {
+            starting = false;
+        } else if (!starting) {
+            // Transport stopped by any means (spacebar, panel Stop, controller):
+            // the session is over — never leave arms/mutes behind.
+            finish();
+        }
     }
 
     private void onPlayPosition(double pos) {
@@ -134,29 +167,37 @@ public class CompingMode {
         final String cycled = currentLane == 0 ? " — cycled back, replacing takes" : "";
         host.showPopupNotification("Comping: lane " + (currentLane + 1) + "/" + lanes.size()
                 + " (" + laneName(currentLane) + ")" + cycled);
-        host.println("[QR] comping lane -> " + currentLane);
+        host.println("[TL] comping lane -> " + currentLane);
     }
 
-    private void stop() {
+    private void stopRequested() {
+        if (!active) {
+            return;
+        }
+        transport.stop();
+        finish(); // idempotent with the isPlaying-driven finish
+    }
+
+    /** Restore every state the session touched and clear automation overrides. */
+    private void finish() {
         if (!active) {
             return;
         }
         active = false;
-        transport.stop();
+        starting = false;
         transport.isArrangerRecordEnabled().set(false);
-        if (savedOverdub != null) {
-            transport.isArrangerOverdubEnabled().set(savedOverdub);
-            savedOverdub = null;
+        transport.isArrangerOverdubEnabled().set(savedOverdub);
+        transport.isArrangerLoopEnabled().set(savedLoopEnabled);
+        for (int i = 0; i < lanes.size(); i++) {
+            final Track track = trackBank.getItemAt(lanes.get(i));
+            track.arm().set(savedArm[i]);
+            track.mute().set(savedMute[i]);
         }
-        // Leave all lanes armed (as the user started); the last recorded lane
-        // stays audible and the others muted — audition picks up from there.
-        for (int lane : lanes) {
-            trackBank.getItemAt(lane).arm().set(true);
-        }
-        auditionLane = currentLane;
+        transport.resetAutomationOverrides();
+        auditionLane = -1;
         host.showPopupNotification("Comping: done, " + lanes.size()
                 + " lanes recorded — cycle them with Audition next lane");
-        host.println("[QR] comping stop");
+        host.println("[TL] comping finished, state restored");
     }
 
     /**
@@ -165,7 +206,7 @@ public class CompingMode {
      */
     private void auditionNext() {
         if (lanes.isEmpty()) {
-            host.showPopupNotification("QuickRetake comping: no lanes yet");
+            host.showPopupNotification("TakeLab comping: no lanes yet");
             return;
         }
         auditionLane = (auditionLane + 1) % lanes.size();
@@ -178,6 +219,7 @@ public class CompingMode {
         for (int lane : lanes) {
             trackBank.getItemAt(lane).mute().set(false);
         }
+        transport.resetAutomationOverrides();
         auditionLane = -1;
     }
 

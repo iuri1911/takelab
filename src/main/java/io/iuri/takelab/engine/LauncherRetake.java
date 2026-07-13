@@ -1,4 +1,4 @@
-package dev.iuri.quickretake.engine;
+package io.iuri.takelab.engine;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,8 +10,8 @@ import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.DeleteableObject;
 import com.bitwig.extension.controller.api.Transport;
 
-import dev.iuri.quickretake.engine.RecordingContext.SlotRef;
-import dev.iuri.quickretake.settings.RetakeSettings;
+import io.iuri.takelab.engine.RecordingContext.SlotRef;
+import io.iuri.takelab.settings.RetakeSettings;
 
 /**
  * Launcher retake: slots are fully scriptable, so the take clip is deleted
@@ -42,9 +42,9 @@ public class LauncherRetake {
         // L0 — synchronous: the second tap only started plain playback; stop it.
         transport.stop();
         if (settings.showNotifications()) {
-            host.showPopupNotification("QuickRetake: retaking (launcher)");
+            host.showPopupNotification("TakeLab: retaking (launcher)");
         }
-        host.println("[QR] launcher retake: " + ctx.slots().size() + " slot(s)");
+        host.println("[TL] launcher retake: " + ctx.slots().size() + " slot(s)");
 
         final boolean keepTakes = settings.keepTakes();
         final List<SlotRef> recordTargets = keepTakes ? resolveKeepTakeTargets(ctx) : ctx.slots();
@@ -60,7 +60,7 @@ public class LauncherRetake {
                 final DeleteableObject[] clips = ctx.slots().stream()
                         .map(SlotRef::slot)
                         .toArray(DeleteableObject[]::new);
-                host.deleteObjects("QuickRetake discard", clips);
+                host.deleteObjects("TakeLab discard", clips);
             });
         }
 
@@ -110,7 +110,7 @@ public class LauncherRetake {
                 }
             }
             if (target == null) {
-                host.showPopupNotification("QuickRetake: no empty slot below, overwriting take");
+                host.showPopupNotification("TakeLab: no empty slot below, overwriting take");
                 target = ref;
             }
             targets.add(target);

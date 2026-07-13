@@ -1,4 +1,4 @@
-package dev.iuri.quickretake;
+package io.iuri.takelab;
 
 import java.util.UUID;
 
@@ -7,13 +7,13 @@ import java.util.UUID;
  * activates a controller once all declared ports are assigned, so this is a
  * separate entry from the port-less default.
  */
-public class QuickRetakeMidiTriggerExtensionDefinition extends QuickRetakeExtensionDefinition {
+public class TakeLabMidiTriggerExtensionDefinition extends TakeLabExtensionDefinition {
 
     private static final UUID DRIVER_ID = UUID.fromString("3e8b6d92-51c7-4f0a-9d34-8a7e5c20fd18");
 
     @Override
     public String getName() {
-        return "QuickRetake + MIDI Trigger";
+        return "TakeLab + MIDI Trigger";
     }
 
     @Override
@@ -23,7 +23,7 @@ public class QuickRetakeMidiTriggerExtensionDefinition extends QuickRetakeExtens
 
     @Override
     public String getHardwareModel() {
-        return "QuickRetake + MIDI Trigger";
+        return "TakeLab + MIDI Trigger";
     }
 
     @Override

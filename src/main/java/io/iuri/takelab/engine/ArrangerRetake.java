@@ -1,4 +1,4 @@
-package dev.iuri.quickretake.engine;
+package io.iuri.takelab.engine;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,7 +8,7 @@ import com.bitwig.extension.controller.api.Application;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.Transport;
 
-import dev.iuri.quickretake.settings.RetakeSettings;
+import io.iuri.takelab.settings.RetakeSettings;
 
 /**
  * Arranger retake: the API cannot enumerate or delete arranger clips, so the
@@ -40,9 +40,9 @@ public class ArrangerRetake {
         // A0 — synchronous: kill whatever the second tap started before it commits anything.
         transport.stop();
         if (settings.showNotifications()) {
-            host.showPopupNotification("QuickRetake: retaking (arranger)");
+            host.showPopupNotification("TakeLab: retaking (arranger)");
         }
-        host.println("[QR] arranger retake: anchor=" + ctx.anchorBeats()
+        host.println("[TL] arranger retake: anchor=" + ctx.anchorBeats()
                 + " recorded=" + ctx.recordedBeats() + " beats");
 
         final List<Runnable> steps = new ArrayList<>();
@@ -51,7 +51,7 @@ public class ArrangerRetake {
         // started (and our stop just ended) a new record pass that committed content.
         steps.add(() -> {
             if (monitor.recordPassCount() > ctx.recordPassCount() && monitor.contentRecordedInCurrentPass()) {
-                host.println("[QR] undoing junk pass");
+                host.println("[TL] undoing junk pass");
                 application.undo();
             }
         });
@@ -60,10 +60,10 @@ public class ArrangerRetake {
         // nothing was committed, undo would eat an unrelated edit).
         steps.add(() -> {
             if (ctx.contentRecorded()) {
-                host.println("[QR] undoing take");
+                host.println("[TL] undoing take");
                 application.undo();
             } else {
-                host.println("[QR] count-in case, no undo");
+                host.println("[TL] count-in case, no undo");
             }
         });
 

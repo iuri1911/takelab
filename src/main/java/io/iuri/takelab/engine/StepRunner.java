@@ -1,4 +1,4 @@
-package dev.iuri.quickretake.engine;
+package io.iuri.takelab.engine;
 
 import java.util.List;
 import java.util.function.BooleanSupplier;

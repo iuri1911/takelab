@@ -4,13 +4,13 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>dev.iuri</groupId>
-  <artifactId>quickretake</artifactId>
-  <version>0.1.0</version>
+  <groupId>io.iuri</groupId>
+  <artifactId>takelab</artifactId>
+  <version>0.2.0</version>
   <packaging>jar</packaging>
 
-  <name>QuickRetake</name>
-  <description>Instant discard-and-re-record of MIDI takes in Bitwig Studio</description>
+  <name>TakeLab</name>
+  <description>MIDI retake and comping (take lanes) for Bitwig Studio — by iuri.io</description>
 
   <properties>
     <maven.compiler.release>21</maven.compiler.release>
@@ -52,7 +52,7 @@
             </goals>
             <configuration>
               <sourceFile>${project.build.directory}/${project.build.finalName}.jar</sourceFile>
-              <destinationFile>${bitwig.extensions.dir}/QuickRetake.bwextension</destinationFile>
+              <destinationFile>${bitwig.extensions.dir}/TakeLab.bwextension</destinationFile>
             </configuration>
           </execution>
         </executions>

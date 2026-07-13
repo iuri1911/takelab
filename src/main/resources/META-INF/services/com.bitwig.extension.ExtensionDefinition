@@ -1,2 +1,2 @@
-dev.iuri.quickretake.QuickRetakeExtensionDefinition
-dev.iuri.quickretake.QuickRetakeMidiTriggerExtensionDefinition
+io.iuri.takelab.TakeLabExtensionDefinition
+io.iuri.takelab.TakeLabMidiTriggerExtensionDefinition

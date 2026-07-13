@@ -1,4 +1,4 @@
-package dev.iuri.quickretake.trigger;
+package io.iuri.takelab.trigger;
 
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.HardwareActionBindable;
@@ -6,7 +6,7 @@ import com.bitwig.extension.controller.api.HardwareButton;
 import com.bitwig.extension.controller.api.HardwareSurface;
 import com.bitwig.extension.controller.api.MidiIn;
 
-import dev.iuri.quickretake.settings.RetakeSettings;
+import io.iuri.takelab.settings.RetakeSettings;
 
 /**
  * Optional one-press retake trigger from a MIDI note or CC (footswitch/pad).
@@ -29,7 +29,7 @@ public class MidiTrigger {
             if (!RetakeSettings.TRIGGER_OFF.equals(settings.triggerType())) {
                 onTrigger.run();
             }
-        }, () -> "QuickRetake: retake");
+        }, () -> "TakeLab: retake");
         action.addBinding(button.pressedAction());
 
         settings.triggerTypeSetting().addValueObserver(v -> updateMatcher());

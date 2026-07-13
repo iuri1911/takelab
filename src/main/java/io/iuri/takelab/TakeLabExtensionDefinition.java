@@ -1,4 +1,4 @@
-package dev.iuri.quickretake;
+package io.iuri.takelab;
 
 import java.util.UUID;
 
@@ -7,23 +7,23 @@ import com.bitwig.extension.controller.AutoDetectionMidiPortNamesList;
 import com.bitwig.extension.controller.ControllerExtensionDefinition;
 import com.bitwig.extension.controller.api.ControllerHost;
 
-public class QuickRetakeExtensionDefinition extends ControllerExtensionDefinition {
+public class TakeLabExtensionDefinition extends ControllerExtensionDefinition {
 
     private static final UUID DRIVER_ID = UUID.fromString("7a4f3c1e-9b2d-4e8a-b6c5-2d1f0a8e6b43");
 
     @Override
     public String getName() {
-        return "QuickRetake";
+        return "TakeLab";
     }
 
     @Override
     public String getAuthor() {
-        return "Iuri";
+        return "iuri.io";
     }
 
     @Override
     public String getVersion() {
-        return "0.1.0";
+        return "0.2.0";
     }
 
     @Override
@@ -33,12 +33,17 @@ public class QuickRetakeExtensionDefinition extends ControllerExtensionDefinitio
 
     @Override
     public String getHardwareVendor() {
-        return "QuickRetake";
+        return "iuri.io";
+    }
+
+    @Override
+    public String getHelpFilePath() {
+        return "https://github.com/iuri1911/takelab/blob/main/docs/MANUAL.md";
     }
 
     @Override
     public String getHardwareModel() {
-        return "QuickRetake";
+        return "TakeLab";
     }
 
     @Override
@@ -51,7 +56,7 @@ public class QuickRetakeExtensionDefinition extends ControllerExtensionDefinitio
     public int getNumMidiInPorts() {
         // Bitwig refuses to activate a controller until every declared MIDI port is
         // assigned, and the transport-gesture detection needs none. The footswitch
-        // variant (QuickRetakeMidiTriggerExtensionDefinition) declares the port.
+        // variant (TakeLabMidiTriggerExtensionDefinition) declares the port.
         return 0;
     }
 
@@ -66,7 +71,7 @@ public class QuickRetakeExtensionDefinition extends ControllerExtensionDefinitio
     }
 
     @Override
-    public QuickRetakeExtension createInstance(ControllerHost host) {
-        return new QuickRetakeExtension(this, host);
+    public TakeLabExtension createInstance(ControllerHost host) {
+        return new TakeLabExtension(this, host);
     }
 }

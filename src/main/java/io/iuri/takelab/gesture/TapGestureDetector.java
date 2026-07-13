@@ -1,4 +1,4 @@
-package dev.iuri.quickretake.gesture;
+package io.iuri.takelab.gesture;
 
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
@@ -7,10 +7,10 @@ import java.util.function.Consumer;
 import com.bitwig.extension.controller.api.ControllerHost;
 import com.bitwig.extension.controller.api.Transport;
 
-import dev.iuri.quickretake.engine.RecordingContext;
-import dev.iuri.quickretake.engine.RecordingContext.Mode;
-import dev.iuri.quickretake.engine.RecordingMonitor;
-import dev.iuri.quickretake.settings.RetakeSettings;
+import io.iuri.takelab.engine.RecordingContext;
+import io.iuri.takelab.engine.RecordingContext.Mode;
+import io.iuri.takelab.engine.RecordingMonitor;
+import io.iuri.takelab.settings.RetakeSettings;
 
 /**
  * Infers the "double-tap spacebar" retake gesture from transport state, since
@@ -82,7 +82,7 @@ public class TapGestureDetector {
                 if (playing) {
                     if (settings.gestureIsTriple()) {
                         state = State.CONFIRM_WAIT;
-                        host.println("[QR] CONFIRM_WAIT gen=" + generation);
+                        host.println("[TL] CONFIRM_WAIT gen=" + generation);
                         scheduleWindow();
                     } else {
                         fire();
@@ -114,7 +114,7 @@ public class TapGestureDetector {
         lastIdleToggleAtMs = now;
         if (idleToggleCount >= 3) {
             idleToggleCount = 0;
-            host.println("[QR] late undo gesture");
+            host.println("[TL] late undo gesture");
             lateUndoAction.run();
         }
     }
@@ -136,7 +136,7 @@ public class TapGestureDetector {
             savedRecEnable = transport.isArrangerRecordEnabled().get();
             transport.isArrangerRecordEnabled().set(false);
         }
-        host.println("[QR] ARMED gen=" + (generation + 1) + " mode=" + ctx.mode()
+        host.println("[TL] ARMED gen=" + (generation + 1) + " mode=" + ctx.mode()
                 + " anchor=" + ctx.anchorBeats());
         scheduleWindow();
     }
@@ -151,7 +151,7 @@ public class TapGestureDetector {
             return;
         }
         if (state == State.ARMED || state == State.CONFIRM_WAIT) {
-            host.println("[QR] window expired, back to IDLE");
+            host.println("[TL] window expired, back to IDLE");
             restoreRecEnable();
             state = State.IDLE;
         }
@@ -162,7 +162,7 @@ public class TapGestureDetector {
 
         if (ctx.mode() == Mode.MIXED) {
             host.showPopupNotification(
-                    "QuickRetake: simultaneous arranger + launcher recording not supported");
+                    "TakeLab: simultaneous arranger + launcher recording not supported");
             restoreRecEnable();
             state = State.IDLE;
             return;
@@ -170,7 +170,7 @@ public class TapGestureDetector {
 
         final double minBeats = settings.minRecordedBeats();
         if (minBeats > 0 && ctx.recordedBeats() < minBeats) {
-            host.println("[QR] below min recorded length, ignoring gesture");
+            host.println("[TL] below min recorded length, ignoring gesture");
             restoreRecEnable();
             state = State.IDLE;
             return;
@@ -179,17 +179,17 @@ public class TapGestureDetector {
         // The arranger sequence re-enables record itself; drop the saved value.
         savedRecEnable = null;
         state = State.EXECUTING;
-        host.println("[QR] EXECUTING mode=" + ctx.mode());
+        host.println("[TL] EXECUTING mode=" + ctx.mode());
         executor.accept(ctx, this::onSequenceDone);
     }
 
     private void onSequenceDone(boolean success) {
         state = State.IDLE;
         if (!success) {
-            host.showPopupNotification("QuickRetake: retake failed (recording did not restart)");
-            host.println("[QR] sequence FAILED");
+            host.showPopupNotification("TakeLab: retake failed (recording did not restart)");
+            host.println("[TL] sequence FAILED");
         } else {
-            host.println("[QR] sequence done");
+            host.println("[TL] sequence done");
         }
     }
 

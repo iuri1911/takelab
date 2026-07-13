@@ -1,4 +1,4 @@
-package dev.iuri.quickretake.engine;
+package io.iuri.takelab.engine;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -11,8 +11,8 @@ import com.bitwig.extension.controller.api.Track;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extension.controller.api.Transport;
 
-import dev.iuri.quickretake.engine.RecordingContext.Mode;
-import dev.iuri.quickretake.engine.RecordingContext.SlotRef;
+import io.iuri.takelab.engine.RecordingContext.Mode;
+import io.iuri.takelab.engine.RecordingContext.SlotRef;
 
 /**
  * Continuously tracks what is being recorded: the arranger record pass (take
