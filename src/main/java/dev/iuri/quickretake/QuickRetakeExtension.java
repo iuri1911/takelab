@@ -23,12 +23,14 @@ public class QuickRetakeExtension extends ControllerExtension {
     private static final int NUM_TRACKS = 32;
     private static final int NUM_SCENES = 32;
 
+    private final int numMidiInPorts;
     private HardwareSurface surface;
     private ArrangerRetake arrangerRetake;
     private LauncherRetake launcherRetake;
 
     protected QuickRetakeExtension(QuickRetakeExtensionDefinition definition, ControllerHost host) {
         super(definition, host);
+        numMidiInPorts = definition.getNumMidiInPorts();
     }
 
     @Override
@@ -56,8 +58,10 @@ public class QuickRetakeExtension extends ControllerExtension {
         final TapGestureDetector detector =
                 new TapGestureDetector(host, transport, settings, monitor, this::executeRetake);
 
-        surface = host.createHardwareSurface();
-        new MidiTrigger(host, surface, settings, detector::onExternalTrigger);
+        if (numMidiInPorts > 0) {
+            surface = host.createHardwareSurface();
+            new MidiTrigger(host, surface, settings, detector::onExternalTrigger);
+        }
 
         host.println("[QR] QuickRetake 0.1.0 ready");
         host.showPopupNotification("QuickRetake loaded");

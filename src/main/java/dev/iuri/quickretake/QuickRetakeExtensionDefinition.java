@@ -49,9 +49,10 @@ public class QuickRetakeExtensionDefinition extends ControllerExtensionDefinitio
 
     @Override
     public int getNumMidiInPorts() {
-        // Optional footswitch/button trigger. The port may be left unassigned;
-        // the transport-gesture detection works without any MIDI input.
-        return 1;
+        // Bitwig refuses to activate a controller until every declared MIDI port is
+        // assigned, and the transport-gesture detection needs none. The footswitch
+        // variant (QuickRetakeMidiTriggerExtensionDefinition) declares the port.
+        return 0;
     }
 
     @Override
