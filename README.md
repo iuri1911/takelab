@@ -10,7 +10,7 @@ Bitwig has comping for audio, but nothing equivalent for MIDI. Flub a take and y
 
 - **Double-tap retake** — recording and messed up? Tap play/stop twice, fast. TakeLab discards the take, rewinds to where it started and records again. Works in the **Arranger** and in the **Clip Launcher**.
 - **MIDI comping with take lanes** — loop-record a passage; every loop pass lands on its own track, arm rotates automatically, only the active lane is audible. Audition lanes one at a time without soloing away the rest of your song. Controlled from Bitwig's **Studio I/O panel**.
-- **Always record** — persistent record mode: the arranger record toggle stays armed through stops, clicks and edits — press play and you are recording, always. Disarming record by hand pauses it, arming resumes; bind the `R` key to Bitwig's *Toggle Record* action and it becomes a one-key switch.
+- **Always record** — persistent record mode: the arranger record toggle stays armed through stops, clicks and edits — press play and you are recording, always. Disarming record by hand pauses it, arming resumes; Bitwig's default *Toggle Record* shortcut (`F9`), or `R` if you rebind it, becomes a one-key pause/resume switch (see [manual §7](docs/MANUAL.md#7-always-record)).
 - **Late undo** — missed the tap window? Three quick taps discard the last take, no mouse needed. (Off by default.)
 - **Keep takes (Launcher)** — instead of discarding, park each take in the slot and re-record into the next empty slot below.
 - **MIDI footswitch trigger** — one pedal press = stop + retake, hands never leave the instrument.

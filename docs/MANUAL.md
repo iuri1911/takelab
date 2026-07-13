@@ -115,7 +115,7 @@ Bitwig clears the arranger record toggle after every stop; if you are in a "reco
 
 **Pausing without leaving the mode:** manually disarming record (the transport record button, or a key bound to it) *pauses* enforcement — the popup says so, and the panel toggle stays on. Arming record again resumes. Pausing is how you play back without recording; resuming is one press away.
 
-**Recommended setup:** Bitwig's `R` key is unbound by default. In **Dashboard → Settings → Shortcuts**, search "record" and bind `R` to *Toggle Record*. Now `R` is a one-key momentary switch for the whole mode: `R` pauses, `R` resumes — and the panel toggle remains the on/off switch for the feature itself. (Extensions cannot register shortcuts of their own — see §12.)
+**Recommended setup:** Bitwig's *Toggle Record* action already has a default shortcut, `F9` — that alone is enough to pause/resume the mode with one key. If you'd rather use `R`, bind it in **Dashboard → Settings → Shortcuts** (search "record", assign `R` to *Toggle Record*) — a personal preference, nothing about the mode changes either way. Either key becomes a one-press switch: press to pause, press again to resume — the panel toggle remains the on/off switch for the feature itself. (Extensions cannot register shortcuts of their own — see §12.)
 
 Retakes (§3–§4) and late undo (§6) work normally while the mode is active. Comping sessions (§8) manage the record toggle themselves; always record stands back until the session ends.
 
