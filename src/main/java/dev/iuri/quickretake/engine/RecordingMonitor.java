@@ -31,6 +31,8 @@ public class RecordingMonitor {
     private final Transport transport;
     private final TrackBank trackBank;
 
+    private boolean playing;
+    private boolean arrangerRecordEnabled;
     private boolean arrangerRecActive;
     private long arrangerRecStoppedAtMs = Long.MIN_VALUE;
     private int recordPassCount;
@@ -48,19 +50,18 @@ public class RecordingMonitor {
         this.transport = transport;
         this.trackBank = trackBank;
 
-        transport.isArrangerRecordEnabled().markInterested();
         transport.playStartPosition().markInterested();
 
-        transport.addIsRecordingObserver(recording -> {
-            if (recording) {
-                recordPassCount++;
-                arrangerRecActive = true;
-                anchorBeats = transport.playStartPosition().get();
-                maxPlayPosBeats = anchorBeats;
-            } else {
-                arrangerRecActive = false;
-                arrangerRecStoppedAtMs = System.currentTimeMillis();
-            }
+        // "Actively recording an arranger pass" has no direct API value (the old
+        // addIsRecordingObserver is deprecated and only mirrored the record toggle,
+        // and Bitwig 6 throws on deprecated calls) — derive it: playing AND record enabled.
+        transport.isPlaying().addValueObserver(playing -> {
+            this.playing = playing;
+            recomputeArrangerRecording();
+        });
+        transport.isArrangerRecordEnabled().addValueObserver(enabled -> {
+            this.arrangerRecordEnabled = enabled;
+            recomputeArrangerRecording();
         });
 
         transport.playPosition().addValueObserver(pos -> {
@@ -95,6 +96,21 @@ public class RecordingMonitor {
                     }
                 });
             }
+        }
+    }
+
+    private void recomputeArrangerRecording() {
+        final boolean active = playing && arrangerRecordEnabled;
+        if (active == arrangerRecActive) {
+            return;
+        }
+        arrangerRecActive = active;
+        if (active) {
+            recordPassCount++;
+            anchorBeats = transport.playStartPosition().get();
+            maxPlayPosBeats = anchorBeats;
+        } else {
+            arrangerRecStoppedAtMs = System.currentTimeMillis();
         }
     }
 
