@@ -34,6 +34,7 @@ public class CompingMode {
     private int currentLane;
     private int auditionLane = -1;
     private double lastPlayPos = Double.NEGATIVE_INFINITY;
+    private Boolean savedOverdub;
 
     public CompingMode(ControllerHost host, Transport transport, TrackBank trackBank,
             RetakeSettings settings, StepRunner runner) {
@@ -46,11 +47,12 @@ public class CompingMode {
         transport.isArrangerLoopEnabled().markInterested();
         transport.arrangerLoopStart().markInterested();
         transport.arrangerLoopDuration().markInterested();
+        transport.isArrangerOverdubEnabled().markInterested();
 
         for (int t = 0; t < trackBank.getSizeOfBank(); t++) {
             final Track track = trackBank.getItemAt(t);
             track.arm().markInterested();
-            track.solo().markInterested();
+            track.mute().markInterested();
             track.name().markInterested();
             track.exists().markInterested();
         }
@@ -60,12 +62,12 @@ public class CompingMode {
         final DocumentState doc = host.getDocumentState();
         final Signal start = doc.getSignalSetting("Armed tracks become lanes", "MIDI Comping", "Start");
         final Signal stop = doc.getSignalSetting("Stop and keep lanes", "MIDI Comping", "Stop");
-        final Signal audition = doc.getSignalSetting("Cycle exclusive solo", "MIDI Comping", "Audition next lane");
-        final Signal clear = doc.getSignalSetting("Unsolo all lanes", "MIDI Comping", "Clear solos");
+        final Signal audition = doc.getSignalSetting("Cycle audible lane", "MIDI Comping", "Audition next lane");
+        final Signal unmute = doc.getSignalSetting("Unmute all lanes", "MIDI Comping", "Unmute all");
         start.addSignalObserver(this::start);
         stop.addSignalObserver(this::stop);
         audition.addSignalObserver(this::auditionNext);
-        clear.addSignalObserver(this::clearSolos);
+        unmute.addSignalObserver(this::unmuteAllLanes);
     }
 
     public boolean isActive() {
@@ -93,9 +95,13 @@ public class CompingMode {
         auditionLane = -1;
         lastPlayPos = Double.NEGATIVE_INFINITY;
 
+        // Re-entering a lane must REPLACE its previous take, not stack notes on
+        // top of it: arranger overdub off for the whole comping session.
+        savedOverdub = transport.isArrangerOverdubEnabled().get();
+        transport.isArrangerOverdubEnabled().set(false);
+
         final double loopStart = transport.arrangerLoopStart().get();
-        armOnly(currentLane);
-        clearSolos();
+        focusLane(currentLane);
 
         final List<Runnable> steps = new ArrayList<>();
         steps.add(transport::stop);
@@ -124,8 +130,8 @@ public class CompingMode {
 
     private void advanceLane() {
         currentLane = (currentLane + 1) % lanes.size();
-        armOnly(currentLane);
-        final String cycled = currentLane == 0 ? " — cycled back, pass overdubs lane 1" : "";
+        focusLane(currentLane);
+        final String cycled = currentLane == 0 ? " — cycled back, replacing takes" : "";
         host.showPopupNotification("Comping: lane " + (currentLane + 1) + "/" + lanes.size()
                 + " (" + laneName(currentLane) + ")" + cycled);
         host.println("[QR] comping lane -> " + currentLane);
@@ -138,38 +144,54 @@ public class CompingMode {
         active = false;
         transport.stop();
         transport.isArrangerRecordEnabled().set(false);
-        // Leave the session as the user started it: all lanes armed.
+        if (savedOverdub != null) {
+            transport.isArrangerOverdubEnabled().set(savedOverdub);
+            savedOverdub = null;
+        }
+        // Leave all lanes armed (as the user started); the last recorded lane
+        // stays audible and the others muted — audition picks up from there.
         for (int lane : lanes) {
             trackBank.getItemAt(lane).arm().set(true);
         }
+        auditionLane = currentLane;
         host.showPopupNotification("Comping: done, " + lanes.size()
-                + " lanes recorded — audition with the solo buttons");
+                + " lanes recorded — cycle them with Audition next lane");
         host.println("[QR] comping stop");
     }
 
+    /**
+     * Audition by MUTE, not solo: only the audible lane changes, the rest of
+     * the project keeps playing (musical context preserved).
+     */
     private void auditionNext() {
         if (lanes.isEmpty()) {
             host.showPopupNotification("QuickRetake comping: no lanes yet");
             return;
         }
         auditionLane = (auditionLane + 1) % lanes.size();
-        for (int i = 0; i < lanes.size(); i++) {
-            trackBank.getItemAt(lanes.get(i)).solo().set(i == auditionLane);
-        }
+        muteAllExcept(auditionLane);
         host.showPopupNotification("Comping: auditioning lane " + (auditionLane + 1) + "/"
                 + lanes.size() + " (" + laneName(auditionLane) + ")");
     }
 
-    private void clearSolos() {
+    private void unmuteAllLanes() {
         for (int lane : lanes) {
-            trackBank.getItemAt(lane).solo().set(false);
+            trackBank.getItemAt(lane).mute().set(false);
         }
         auditionLane = -1;
     }
 
-    private void armOnly(int laneIndex) {
+    /** The active lane records and is heard; every other lane is muted. */
+    private void focusLane(int laneIndex) {
         for (int i = 0; i < lanes.size(); i++) {
             trackBank.getItemAt(lanes.get(i)).arm().set(i == laneIndex);
+        }
+        muteAllExcept(laneIndex);
+    }
+
+    private void muteAllExcept(int laneIndex) {
+        for (int i = 0; i < lanes.size(); i++) {
+            trackBank.getItemAt(lanes.get(i)).mute().set(i != laneIndex);
         }
     }
 

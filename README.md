@@ -65,9 +65,9 @@ O Bitwig só tem comping para áudio. O QuickRetake implementa o equivalente MID
 1. Selecione a região com o **loop do arranger** (as chaves de ciclo) — é ela que define o take, como você pediu.
 2. **Arme (record-arm) todos os lanes** que quiser usar.
 3. No painel **Studio I/O** (borda direita do Bitwig), na seção do QuickRetake, clique **"Start"** (MIDI Comping). A extensão: liga o loop, pula para o início dele, deixa só o lane 1 armado e começa a gravar.
-4. Toque. A cada volta do loop, o arm pula sozinho para o próximo lane — cada passada vira um take na sua própria pista (popup mostra "Comping: lane 2/4 …").
-5. Deu o número de takes que queria? **"Stop"**. (Se passar do último lane, ele volta ao 1º e a passada faz overdub por cima — o popup avisa.)
-6. Audição: **"Audition next lane"** faz solo exclusivo de um lane por vez; **"Clear solos"** limpa. Montar o take final (recortar/colar os melhores trechos entre lanes) é manual no editor — a API não move notas entre clipes do arranger.
+4. Toque. A cada volta do loop, o arm pula sozinho para o próximo lane — cada passada vira um take na sua própria pista (popup mostra "Comping: lane 2/4 …"). Você **só ouve o lane ativo**: os outros lanes ficam mutados automaticamente (mute, não solo — o resto da banda continua tocando).
+5. Deu o número de takes que queria? **"Stop"**. Se passar do último lane, ele volta ao 1º e **substitui** o take antigo (o Arranger Overdub fica desligado durante o comping e é restaurado no fim) — continuar tocando significa que você ainda não achou o take.
+6. Audição: **"Audition next lane"** deixa um lane audível por vez via mute (contexto musical preservado); **"Unmute all"** reabre todos. Montar o take final (recortar/colar os melhores trechos entre lanes) é manual no editor — a API não move notas entre clipes do arranger.
 
 Durante o comping, os gestos de retake ficam suspensos (senão um undo engoliria todos os lanes de uma vez — a gravação em loop contínua é um passo só de undo).
 
