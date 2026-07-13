@@ -1,5 +1,6 @@
 package io.iuri.takelab;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import com.bitwig.extension.controller.ControllerExtension;
@@ -10,6 +11,7 @@ import com.bitwig.extension.controller.api.HardwareSurface;
 import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extension.controller.api.Transport;
 
+import io.iuri.takelab.engine.AlwaysRecord;
 import io.iuri.takelab.engine.ArrangerRetake;
 import io.iuri.takelab.engine.CompingMode;
 import io.iuri.takelab.engine.LauncherRetake;
@@ -61,22 +63,28 @@ public class TakeLabExtension extends ControllerExtension {
         final CompingMode comping =
                 new CompingMode(host, transport, trackBank, settings, runner, documentState);
 
-        final Runnable lateUndo = () -> {
-            transport.stop();
-            application.undo();
-            if (settings.showNotifications()) {
-                host.showPopupNotification("TakeLab: late undo (last take removed)");
-            }
-        };
+        final Runnable lateUndo = () -> runner.run(settings.stepDelayMs(),
+                List.of(transport::stop, application::undo), () -> {
+                    if (settings.showNotifications()) {
+                        host.showPopupNotification("TakeLab: late undo (last take removed)");
+                    }
+                });
+        // A tap's junk crumb commits when its pass stops; give the engine one
+        // step of room before undoing it.
+        final Runnable discardMicroPass = () -> runner.run(settings.stepDelayMs(),
+                List.of((Runnable) application::undo), null);
         final TapGestureDetector detector = new TapGestureDetector(host, transport, settings,
-                monitor, this::executeRetake, comping::isActive, lateUndo);
+                monitor, this::executeRetake, comping::isActive, lateUndo, discardMicroPass);
+
+        new AlwaysRecord(host, transport, settings,
+                () -> detector.isRearmSuppressed() || comping.isActive());
 
         if (numMidiInPorts > 0) {
             surface = host.createHardwareSurface();
             new MidiTrigger(host, surface, settings, detector::onExternalTrigger);
         }
 
-        host.println("[TL] TakeLab 0.2.0 ready");
+        host.println("[TL] TakeLab " + getExtensionDefinition().getVersion() + " ready");
         host.showPopupNotification("TakeLab loaded");
     }
 

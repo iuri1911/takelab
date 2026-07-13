@@ -34,6 +34,7 @@ public class RecordingMonitor {
     private boolean playing;
     private boolean arrangerRecordEnabled;
     private boolean arrangerRecActive;
+    private long arrangerRecStartedAtMs = Long.MIN_VALUE;
     private long arrangerRecStoppedAtMs = Long.MIN_VALUE;
     private int recordPassCount;
     private double anchorBeats;
@@ -109,6 +110,7 @@ public class RecordingMonitor {
             recordPassCount++;
             anchorBeats = transport.playStartPosition().get();
             maxPlayPosBeats = anchorBeats;
+            arrangerRecStartedAtMs = System.currentTimeMillis();
         } else {
             arrangerRecStoppedAtMs = System.currentTimeMillis();
         }
@@ -129,6 +131,18 @@ public class RecordingMonitor {
     /** Content committed in the pass currently tracked (used for the junk-pass guard). */
     public boolean contentRecordedInCurrentPass() {
         return maxPlayPosBeats > anchorBeats + 1e-3;
+    }
+
+    /** Wall-clock length of the current arranger pass, or of the last one if
+     * none is active. Long.MAX_VALUE before any pass. Distinguishes real
+     * takes from the micro-passes that always record produces when the user
+     * taps play/stop rapidly (late undo gesture). */
+    public long arrangerPassDurationMs() {
+        if (arrangerRecStartedAtMs == Long.MIN_VALUE) {
+            return Long.MAX_VALUE;
+        }
+        final long end = arrangerRecActive ? System.currentTimeMillis() : arrangerRecStoppedAtMs;
+        return end - arrangerRecStartedAtMs;
     }
 
     public boolean anySlotRecordingOrQueued() {

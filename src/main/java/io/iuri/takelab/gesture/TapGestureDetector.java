@@ -41,6 +41,7 @@ public class TapGestureDetector {
     private final BiConsumer<RecordingContext, Consumer<Boolean>> executor;
     private final BooleanSupplier gesturesSuppressed;
     private final Runnable lateUndoAction;
+    private final Runnable discardMicroPass;
 
     private State state = State.IDLE;
     private long generation;
@@ -52,7 +53,8 @@ public class TapGestureDetector {
 
     public TapGestureDetector(ControllerHost host, Transport transport, RetakeSettings settings,
             RecordingMonitor monitor, BiConsumer<RecordingContext, Consumer<Boolean>> executor,
-            BooleanSupplier gesturesSuppressed, Runnable lateUndoAction) {
+            BooleanSupplier gesturesSuppressed, Runnable lateUndoAction,
+            Runnable discardMicroPass) {
         this.host = host;
         this.transport = transport;
         this.settings = settings;
@@ -60,6 +62,7 @@ public class TapGestureDetector {
         this.executor = executor;
         this.gesturesSuppressed = gesturesSuppressed;
         this.lateUndoAction = lateUndoAction;
+        this.discardMicroPass = discardMicroPass;
 
         transport.isPlaying().addValueObserver(this::onPlayingChanged);
     }
@@ -72,8 +75,12 @@ public class TapGestureDetector {
         switch (state) {
             case IDLE -> {
                 if (!playing && monitor.wasRecordingRecently(REC_TOLERANCE_MS)) {
-                    idleToggleCount = 0;
-                    arm();
+                    if (isMicroPass()) {
+                        onMicroPassStop();
+                    } else {
+                        idleToggleCount = 0;
+                        arm();
+                    }
                 } else {
                     countIdleToggle();
                 }
@@ -101,9 +108,44 @@ public class TapGestureDetector {
     }
 
     /**
+     * With always record on, every tap of play starts an arranger recording,
+     * so rapid play/stop tapping produces recording passes shorter than the
+     * tap window. Those are not real takes: arming a retake on them would
+     * hijack the late undo gesture. Treat them as plain idle toggles.
+     */
+    private boolean isMicroPass() {
+        return !monitor.anySlotRecordingOrQueued()
+                && monitor.arrangerPassDurationMs() <= settings.tapWindowMs();
+    }
+
+    /**
+     * A micro-pass just stopped: with always record armed, any quick tap of
+     * play records a junk crumb over the track. Undo the crumb right away,
+     * then disarm record for one tap window so further taps play clean
+     * (always record re-arms after the window via restore).
+     */
+    private void onMicroPassStop() {
+        if (!settings.lateUndo()) {
+            return;
+        }
+        if (monitor.contentRecordedInCurrentPass()) {
+            host.println("[TL] discarding micro-pass crumb");
+            discardMicroPass.run();
+        }
+        if (savedRecEnable == null && transport.isArrangerRecordEnabled().get()) {
+            savedRecEnable = true;
+            transport.isArrangerRecordEnabled().set(false);
+            scheduleWindow();
+        }
+        countIdleToggle();
+    }
+
+    /**
      * Late undo: the user missed the retake window and the flubbed take is
      * committed. Three rapid play/stop toggles outside any recording context
-     * (each within the tap window) fire a plain undo. Off by default.
+     * (each within the tap window) fire a plain undo of the take — any junk
+     * crumb from the first tap was already discarded when its micro-pass
+     * stopped. Off by default.
      */
     private void countIdleToggle() {
         if (!settings.lateUndo()) {
@@ -152,9 +194,10 @@ public class TapGestureDetector {
         }
         if (state == State.ARMED || state == State.CONFIRM_WAIT) {
             host.println("[TL] window expired, back to IDLE");
-            restoreRecEnable();
             state = State.IDLE;
         }
+        // Also covers the IDLE-state suppression around late undo tapping.
+        restoreRecEnable();
     }
 
     private void fire() {
@@ -191,6 +234,11 @@ public class TapGestureDetector {
         } else {
             host.println("[TL] sequence done");
         }
+    }
+
+    /** True while the tap window has the arranger record toggle suppressed. */
+    public boolean isRearmSuppressed() {
+        return savedRecEnable != null;
     }
 
     /** Footswitch/button trigger: one press = stop (if rolling) + retake. */

@@ -24,12 +24,18 @@ public class RetakeSettings {
     public static final String TRIGGER_NOTE = "Note";
     public static final String TRIGGER_CC = "CC";
 
-    // Quick access (Studio I/O panel, per project)
-    private final SettableBooleanValue arrangerEnabled;
-    private final SettableBooleanValue launcherEnabled;
+    // Quick access (Studio I/O panel, per project). Bitwig does not render
+    // boolean DocumentState settings in the panel, so toggles are Off/On enums.
+    private static final String OFF = "Off";
+    private static final String ON = "On";
+    private static final String[] OFF_ON = { OFF, ON };
+
+    private final SettableEnumValue arrangerEnabled;
+    private final SettableEnumValue launcherEnabled;
     private final SettableEnumValue gesture;
-    private final SettableBooleanValue lateUndo;
-    private final SettableBooleanValue keepTakes;
+    private final SettableEnumValue lateUndo;
+    private final SettableEnumValue keepTakes;
+    private final SettableEnumValue alwaysRecord;
 
     // Preferences (controller settings page)
     private final SettableRangedValue tapWindowMs;
@@ -44,12 +50,13 @@ public class RetakeSettings {
 
     public RetakeSettings(Preferences prefs, DocumentState doc) {
         // --- Studio I/O panel ---
-        arrangerEnabled = doc.getBooleanSetting("Retake in Arranger", "Retake", true);
-        launcherEnabled = doc.getBooleanSetting("Retake in Launcher", "Retake", true);
+        arrangerEnabled = doc.getEnumSetting("Retake in Arranger", "Retake", OFF_ON, ON);
+        launcherEnabled = doc.getEnumSetting("Retake in Launcher", "Retake", OFF_ON, ON);
         gesture = doc.getEnumSetting("Retake gesture", "Retake",
                 new String[] { GESTURE_DOUBLE, GESTURE_TRIPLE }, GESTURE_DOUBLE);
-        lateUndo = doc.getBooleanSetting("Late undo (3 quick taps)", "Retake", false);
-        keepTakes = doc.getBooleanSetting("Keep discarded takes (Launcher only)", "Retake", false);
+        lateUndo = doc.getEnumSetting("Late undo (3 quick taps)", "Retake", OFF_ON, OFF);
+        keepTakes = doc.getEnumSetting("Keep discarded takes (Launcher only)", "Retake", OFF_ON, OFF);
+        alwaysRecord = doc.getEnumSetting("Always record (Arranger)", "Retake", OFF_ON, OFF);
 
         // --- Preferences ---
         tapWindowMs = prefs.getNumberSetting("Tap window", "Gesture Tuning", 150, 1000, 10, "ms", 400);
@@ -72,6 +79,7 @@ public class RetakeSettings {
         gesture.markInterested();
         lateUndo.markInterested();
         keepTakes.markInterested();
+        alwaysRecord.markInterested();
         tapWindowMs.markInterested();
         suppressRearm.markInterested();
         minRecordedBeats.markInterested();
@@ -96,15 +104,15 @@ public class RetakeSettings {
     }
 
     public boolean lateUndo() {
-        return lateUndo.get();
+        return ON.equals(lateUndo.get());
     }
 
     public boolean arrangerEnabled() {
-        return arrangerEnabled.get();
+        return ON.equals(arrangerEnabled.get());
     }
 
     public boolean launcherEnabled() {
-        return launcherEnabled.get();
+        return ON.equals(launcherEnabled.get());
     }
 
     public double minRecordedBeats() {
@@ -137,8 +145,17 @@ public class RetakeSettings {
     }
 
     public boolean keepTakes() {
-        return keepTakes.get();
+        return ON.equals(keepTakes.get());
     }
+
+    public boolean alwaysRecord() {
+        return ON.equals(alwaysRecord.get());
+    }
+
+    public SettableEnumValue alwaysRecordSetting() {
+        return alwaysRecord;
+    }
+
 
     public SettableEnumValue triggerTypeSetting() {
         return triggerType;

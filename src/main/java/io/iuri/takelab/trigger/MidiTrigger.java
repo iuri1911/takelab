@@ -24,7 +24,7 @@ public class MidiTrigger {
         this.settings = settings;
         this.midiIn = host.getMidiInPort(0);
 
-        button = surface.createHardwareButton("QR_RETAKE_TRIGGER");
+        button = surface.createHardwareButton("TL_RETAKE_TRIGGER");
         final HardwareActionBindable action = host.createAction(() -> {
             if (!RetakeSettings.TRIGGER_OFF.equals(settings.triggerType())) {
                 onTrigger.run();
