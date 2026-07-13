@@ -17,7 +17,12 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home mvn pac
 
 O build copia `QuickRetake.bwextension` direto para `~/Documents/Bitwig Studio/Extensions/` (o Bitwig recarrega sozinho ao trocar o arquivo).
 
-No Bitwig: **Settings → Controllers → Add Controller → QuickRetake → QuickRetake**. Pode deixar a porta MIDI sem atribuir — o gesto de transporte funciona sem MIDI. Ao ativar, aparece o popup "QuickRetake loaded".
+No Bitwig: **Settings → Controllers → Add Controller → QuickRetake**. Há dois produtos:
+
+- **QuickRetake** — use este por padrão. Não declara porta MIDI nenhuma, então ativa imediatamente (o Bitwig se recusa a ativar controllers com portas declaradas e não atribuídas).
+- **QuickRetake + MIDI Trigger** — só se você for usar pedal/botão MIDI. Exige atribuir a porta de entrada para ativar.
+
+Ao ativar, aparece o popup "QuickRetake loaded".
 
 ## Como usar
 
