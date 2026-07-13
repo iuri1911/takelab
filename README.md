@@ -4,10 +4,13 @@
 
 Bitwig has comping for audio, but nothing equivalent for MIDI. Flub a take and you stop, delete, re-arm and start over by hand — a workflow gap the community has been asking about [since 2021](https://bitwish.top/t/midi-comping/12). TakeLab closes it as a controller extension, 100% inside Bitwig, no companion app.
 
+> **Alpha** — this is the first public version. Expect bugs and rough edges; improvements and bug reports are very welcome (see [Status & contributing](#status--contributing)).
+
 ## Features
 
 - **Double-tap retake** — recording and messed up? Tap play/stop twice, fast. TakeLab discards the take, rewinds to where it started and records again. Works in the **Arranger** and in the **Clip Launcher**.
 - **MIDI comping with take lanes** — loop-record a passage; every loop pass lands on its own track, arm rotates automatically, only the active lane is audible. Audition lanes one at a time without soloing away the rest of your song. Controlled from Bitwig's **Studio I/O panel**.
+- **Always record** — persistent record mode: the arranger record toggle stays armed through stops, clicks and edits — press play and you are recording, always. Disarming record by hand pauses it, arming resumes; bind the `R` key to Bitwig's *Toggle Record* action and it becomes a one-key switch.
 - **Late undo** — missed the tap window? Three quick taps discard the last take, no mouse needed. (Off by default.)
 - **Keep takes (Launcher)** — instead of discarding, park each take in the slot and re-record into the next empty slot below.
 - **MIDI footswitch trigger** — one pedal press = stop + retake, hands never leave the instrument.
@@ -64,6 +67,7 @@ Full walkthrough with screenshots-level detail: **[docs/MANUAL.md](docs/MANUAL.m
 | Retake | Retake in Arranger / in Launcher | Enable each scope independently |
 | Retake | Retake gesture | Double tap, or strict triple tap (zero false positives) |
 | Retake | Late undo (3 quick taps) | Discard the last take after the window was missed |
+| Retake | Always record (Arranger) | Keep the record toggle armed at all times; the record button pauses/resumes |
 | Retake | Keep discarded takes (Launcher only) | Park takes in slots instead of deleting |
 | MIDI Comping | Start / Stop | Begin & end a lane-recording session |
 | MIDI Comping | Audition next lane / Unmute all | Cycle the audible lane / restore all lanes |
@@ -93,9 +97,11 @@ Bitwig hot-reloads the extension on every build.
 - Simultaneous arranger + launcher recording can't be retaken (undo would swallow both); TakeLab warns and does nothing.
 - Cutting the best fragments *between* lanes into a final comp is manual — the API can't move notes across arranger clips.
 
-## Contributing
+## Status & contributing
 
-Issues and PRs welcome. House rules: everything in English; behavior changes must update **both** this README and [docs/MANUAL.md](docs/MANUAL.md).
+TakeLab is in **alpha**: it works — early users are recording and comping with it — but expect bugs, rough edges and fast iteration. Improvements are welcome and PRs even more so. House rules: everything in English; behavior changes must update **both** this README and [docs/MANUAL.md](docs/MANUAL.md).
+
+Found a bug, have an idea, or just want to talk? Open an [issue](../../issues) or write to **ribeiro@iuri.io**.
 
 ## License
 

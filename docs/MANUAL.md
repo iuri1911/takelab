@@ -1,6 +1,6 @@
 # TakeLab Manual
 
-*Version 0.2.0 — for Bitwig Studio 6.x. The [README](../README.md) is the overview; this is the full reference.*
+*Version 0.3.0 — for Bitwig Studio 6.x. The [README](../README.md) is the overview; this is the full reference.*
 
 ---
 
@@ -12,11 +12,12 @@
 4. [Retake in the Arranger](#4-retake-in-the-arranger)
 5. [Retake in the Clip Launcher](#5-retake-in-the-clip-launcher)
 6. [Late undo](#6-late-undo)
-7. [MIDI comping with take lanes](#7-midi-comping-with-take-lanes)
-8. [MIDI footswitch trigger](#8-midi-footswitch-trigger)
-9. [Every setting explained](#9-every-setting-explained)
-10. [Troubleshooting](#10-troubleshooting)
-11. [Design notes & API limitations](#11-design-notes--api-limitations)
+7. [Always record](#7-always-record)
+8. [MIDI comping with take lanes](#8-midi-comping-with-take-lanes)
+9. [MIDI footswitch trigger](#9-midi-footswitch-trigger)
+10. [Every setting explained](#10-every-setting-explained)
+11. [Troubleshooting](#11-troubleshooting)
+12. [Design notes & API limitations](#12-design-notes--api-limitations)
 
 ---
 
@@ -86,13 +87,13 @@ The console line for a healthy retake looks like:
 [TL] sequence done
 ```
 
-**Why undo?** The Controller API cannot list or delete arranger clips (see §11). Undo of a just-finished record pass is exact and — crucially — means a mistaken retake is always recoverable.
+**Why undo?** The Controller API cannot list or delete arranger clips (see §12). Undo of a just-finished record pass is exact and — crucially — means a mistaken retake is always recoverable.
 
 ## 5. Retake in the Clip Launcher
 
 Launcher slots are fully scriptable, so the flow is direct: the recording clip(s) are deleted as **one named undo step** ("TakeLab discard"), then each slot records again. Launch quantization applies to the restart; enable *Bypass launch quantization on retake* (Preferences → Advanced) to restart instantly.
 
-**Keep takes** (Studio I/O panel → Retake): instead of deleting, the flubbed take stays in its slot and recording moves to the **first empty slot below** in the same track. Three retakes = takes stacked in slots 1–3, slot 4 recording. With no empty slot left, TakeLab warns and overwrites. Launcher only — see §11 for why the arranger can't have this.
+**Keep takes** (Studio I/O panel → Retake): instead of deleting, the flubbed take stays in its slot and recording moves to the **first empty slot below** in the same track. Three retakes = takes stacked in slots 1–3, slot 4 recording. With no empty slot left, TakeLab warns and overwrites. Launcher only — see §12 for why the arranger can't have this.
 
 Recording in the arranger **and** a launcher slot at the same time is not retakeable (the undo would swallow both); TakeLab pops a warning and leaves everything untouched.
 
@@ -104,7 +105,21 @@ The scenario: you stopped recording, meant to retake, but tapped too slowly; the
 
 It never triggers while recording (that's the retake path) and never counts taps while a comping session runs.
 
-## 7. MIDI comping with take lanes
+**With always record on** (§7), every tap of play is technically a recording — TakeLab handles it: a recording pass shorter than the tap window is treated as gesture tapping, its junk crumb is discarded immediately, and record is suppressed for one tap window so the remaining taps play clean. The three-tap undo then behaves exactly as described above.
+
+## 7. Always record
+
+Off by default — enable in Studio I/O panel → Retake → **Always record (Arranger)**.
+
+Bitwig clears the arranger record toggle after every stop; if you are in a "record everything, sort it out later" flow, re-arming before each pass is friction. While this mode is on, TakeLab guarantees the record toggle stays armed: record, stop, click around, edit, come back — press play and you are recording. A watchdog re-arms within half a second of any clear.
+
+**Pausing without leaving the mode:** manually disarming record (the transport record button, or a key bound to it) *pauses* enforcement — the popup says so, and the panel toggle stays on. Arming record again resumes. Pausing is how you play back without recording; resuming is one press away.
+
+**Recommended setup:** Bitwig's `R` key is unbound by default. In **Dashboard → Settings → Shortcuts**, search "record" and bind `R` to *Toggle Record*. Now `R` is a one-key momentary switch for the whole mode: `R` pauses, `R` resumes — and the panel toggle remains the on/off switch for the feature itself. (Extensions cannot register shortcuts of their own — see §12.)
+
+Retakes (§3–§4) and late undo (§6) work normally while the mode is active. Comping sessions (§8) manage the record toggle themselves; always record stands back until the session ends.
+
+## 8. MIDI comping with take lanes
 
 Bitwig's take lanes and comping editor are audio-only. TakeLab implements the MIDI equivalent that *is* reachable through the API: **one full take per pass, each on its own track**, hands-free.
 
@@ -129,13 +144,13 @@ Bitwig's take lanes and comping editor are audio-only. TakeLab implements the MI
 - **Unmute all** opens every lane and clears automation overrides.
 - The final comp — splicing the best bars from different lanes — is manual editing (the API cannot move notes between arranger clips): audition, pick, cut/paste in the note editor.
 
-## 8. MIDI footswitch trigger
+## 9. MIDI footswitch trigger
 
 Use the **TakeLab + MIDI Trigger** product, assign its MIDI input, then in Preferences → MIDI Trigger set the type (Note or CC), number and channel.
 
 One press while recording = stop + retake in a single motion. A press during the tap window also fires the retake. CC triggers match value 127 (a momentary switch's "press"), so a pedal release won't double-fire.
 
-## 9. Every setting explained
+## 10. Every setting explained
 
 ### Studio I/O panel (per project — quick access)
 
@@ -146,7 +161,8 @@ One press while recording = stop + retake in a single motion. A press during the
 | Retake gesture | Double tap | `Double tap (stop, play)` or `Triple tap (stop, play, stop)` — strict mode, zero false positives |
 | Late undo (3 quick taps) | off | §6 |
 | Keep discarded takes (Launcher only) | off | §5 |
-| MIDI Comping: Start / Stop / Audition next lane / Unmute all | — | §7 |
+| Always record (Arranger) | off | §7 |
+| MIDI Comping: Start / Stop / Audition next lane / Unmute all | — | §8 |
 
 ### Controller Preferences (global — setup & calibration)
 
@@ -155,12 +171,12 @@ One press while recording = stop + retake in a single motion. A press during the
 | Gesture Tuning | Tap window | 400 ms | Max gap between taps (150–1000). Calibrate to your reflexes: too long and quick stop-then-listen may read as a retake; too short and you'll miss it |
 | Gesture Tuning | Suppress re-record during tap window | on | Blocks the junk-recording the 2nd tap could start (§3) |
 | Gesture Tuning | Ignore takes shorter than | 0 beats | Gesture ignored below this recorded length |
-| MIDI Trigger | Trigger type / Note-CC number / Channel | Off / 64 / 1 | §8 |
+| MIDI Trigger | Trigger type / Note-CC number / Channel | Off / 64 / 1 | §9 |
 | Advanced | Engine step delay | 100 ms | Spacing between queued engine actions (stop→undo→jump→record). Raise on very large projects if retakes misfire |
 | Advanced | Bypass launch quantization on retake | off | Launcher retakes restart instantly instead of on the next quantum |
 | Advanced | Show notifications | on | Popup on every retake/comping event |
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
@@ -173,8 +189,10 @@ One press while recording = stop + retake in a single motion. A press during the
 | Wrong thing undone by a retake | You weren't recording (or recorded elsewhere). Everything TakeLab discards is one `Ctrl+Z` away |
 | Notes at loop boundary land on the wrong lane | Lane switching happens exactly at the wrap; notes held across it stay on the previous lane. Leave a beat of slack in the loop, or play inside the region |
 | Blue automation-override icon stays lit | Fixed in 0.2.0 — comping end and *Unmute all* clear overrides. If you see it elsewhere, hit Bitwig's restore-automation button and report |
+| Record toggle keeps turning itself back on | *Always record* is on (panel → Retake). Disarm record by hand to pause it, or turn the toggle off |
+| Paused always record won't resume | Arm record and leave it armed for a second — the watchdog resumes even if the quick path missed the press. Check the `[TL] always-record` console lines |
 
-## 11. Design notes & API limitations
+## 12. Design notes & API limitations
 
 For the curious and for contributors:
 
