@@ -10,6 +10,7 @@ import com.bitwig.extension.controller.api.TrackBank;
 import com.bitwig.extension.controller.api.Transport;
 
 import dev.iuri.quickretake.engine.ArrangerRetake;
+import dev.iuri.quickretake.engine.CompingMode;
 import dev.iuri.quickretake.engine.LauncherRetake;
 import dev.iuri.quickretake.engine.RecordingContext;
 import dev.iuri.quickretake.engine.RecordingMonitor;
@@ -55,8 +56,17 @@ public class QuickRetakeExtension extends ControllerExtension {
         arrangerRetake = new ArrangerRetake(host, transport, application, monitor, settings, runner);
         launcherRetake = new LauncherRetake(host, transport, monitor, settings, runner);
 
-        final TapGestureDetector detector =
-                new TapGestureDetector(host, transport, settings, monitor, this::executeRetake);
+        final CompingMode comping = new CompingMode(host, transport, trackBank, settings, runner);
+
+        final Runnable lateUndo = () -> {
+            transport.stop();
+            application.undo();
+            if (settings.showNotifications()) {
+                host.showPopupNotification("QuickRetake: late undo (last take removed)");
+            }
+        };
+        final TapGestureDetector detector = new TapGestureDetector(host, transport, settings,
+                monitor, this::executeRetake, comping::isActive, lateUndo);
 
         if (numMidiInPorts > 0) {
             surface = host.createHardwareSurface();

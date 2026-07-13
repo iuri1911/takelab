@@ -1,6 +1,7 @@
 package dev.iuri.quickretake.gesture;
 
 import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import com.bitwig.extension.controller.api.ControllerHost;
@@ -38,28 +39,43 @@ public class TapGestureDetector {
     private final RetakeSettings settings;
     private final RecordingMonitor monitor;
     private final BiConsumer<RecordingContext, Consumer<Boolean>> executor;
+    private final BooleanSupplier gesturesSuppressed;
+    private final Runnable lateUndoAction;
 
     private State state = State.IDLE;
     private long generation;
     private RecordingContext ctx;
     private Boolean savedRecEnable;
 
+    private long lastIdleToggleAtMs = Long.MIN_VALUE;
+    private int idleToggleCount;
+
     public TapGestureDetector(ControllerHost host, Transport transport, RetakeSettings settings,
-            RecordingMonitor monitor, BiConsumer<RecordingContext, Consumer<Boolean>> executor) {
+            RecordingMonitor monitor, BiConsumer<RecordingContext, Consumer<Boolean>> executor,
+            BooleanSupplier gesturesSuppressed, Runnable lateUndoAction) {
         this.host = host;
         this.transport = transport;
         this.settings = settings;
         this.monitor = monitor;
         this.executor = executor;
+        this.gesturesSuppressed = gesturesSuppressed;
+        this.lateUndoAction = lateUndoAction;
 
         transport.isPlaying().addValueObserver(this::onPlayingChanged);
     }
 
     private void onPlayingChanged(boolean playing) {
+        if (gesturesSuppressed.getAsBoolean()) {
+            idleToggleCount = 0;
+            return;
+        }
         switch (state) {
             case IDLE -> {
                 if (!playing && monitor.wasRecordingRecently(REC_TOLERANCE_MS)) {
+                    idleToggleCount = 0;
                     arm();
+                } else {
+                    countIdleToggle();
                 }
             }
             case ARMED -> {
@@ -81,6 +97,25 @@ public class TapGestureDetector {
             case EXECUTING -> {
                 // The retake sequence itself toggles the transport; ignore.
             }
+        }
+    }
+
+    /**
+     * Late undo: the user missed the retake window and the flubbed take is
+     * committed. Three rapid play/stop toggles outside any recording context
+     * (each within the tap window) fire a plain undo. Off by default.
+     */
+    private void countIdleToggle() {
+        if (!settings.lateUndo()) {
+            return;
+        }
+        final long now = System.currentTimeMillis();
+        idleToggleCount = now - lastIdleToggleAtMs <= settings.tapWindowMs() ? idleToggleCount + 1 : 1;
+        lastIdleToggleAtMs = now;
+        if (idleToggleCount >= 3) {
+            idleToggleCount = 0;
+            host.println("[QR] late undo gesture");
+            lateUndoAction.run();
         }
     }
 

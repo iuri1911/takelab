@@ -18,6 +18,7 @@ public class RetakeSettings {
     private final SettableEnumValue gesture;
     private final SettableRangedValue tapWindowMs;
     private final SettableBooleanValue suppressRearm;
+    private final SettableBooleanValue lateUndo;
 
     private final SettableBooleanValue arrangerEnabled;
     private final SettableBooleanValue launcherEnabled;
@@ -37,6 +38,7 @@ public class RetakeSettings {
                 new String[] { GESTURE_DOUBLE, GESTURE_TRIPLE }, GESTURE_DOUBLE);
         tapWindowMs = prefs.getNumberSetting("Tap window", "Gesture", 150, 1000, 10, "ms", 400);
         suppressRearm = prefs.getBooleanSetting("Suppress re-record during tap window", "Gesture", true);
+        lateUndo = prefs.getBooleanSetting("Late undo (triple tap outside recording)", "Gesture", false);
 
         arrangerEnabled = prefs.getBooleanSetting("Arranger retake", "Scope", true);
         launcherEnabled = prefs.getBooleanSetting("Launcher retake", "Scope", true);
@@ -55,6 +57,7 @@ public class RetakeSettings {
         gesture.markInterested();
         tapWindowMs.markInterested();
         suppressRearm.markInterested();
+        lateUndo.markInterested();
         arrangerEnabled.markInterested();
         launcherEnabled.markInterested();
         minRecordedBeats.markInterested();
@@ -77,6 +80,10 @@ public class RetakeSettings {
 
     public boolean suppressRearm() {
         return suppressRearm.get();
+    }
+
+    public boolean lateUndo() {
+        return lateUndo.get();
     }
 
     public boolean arrangerEnabled() {

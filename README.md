@@ -41,13 +41,35 @@ Como a extensão não enxerga o teclado (limitação da API do Bitwig), o "duplo
 | Gesture | Gesture | Stop then Play | `Stop, Play, Stop (strict)` = modo triplo: 2º toque continua tocando (audição); só o 3º toque dentro da janela dispara o retake. Zero falso positivo. |
 | Gesture | Tap window | 400 ms | Janela do duplo/triplo toque (150–1000 ms). |
 | Gesture | Suppress re-record during tap window | ON | Evita que o 2º espaço inicie uma gravação-lixo no arranger antes do retake agir. |
+| Gesture | Late undo (triple tap outside recording) | OFF | Perdeu a janela do duplo toque e o take ruim ficou lá? **Três** toques rápidos de play/stop (fora de gravação) = para o transporte e desfaz o último passo (o take), sem precisar clicar/apagar. |
 | Scope | Arranger / Launcher retake | ON/ON | Habilita cada modo independentemente. |
 | Scope | Minimum recorded length | 0 beats | Gesto é ignorado se o take foi mais curto que isso (anti-falso-positivo). |
 | MIDI Trigger | Trigger type / number / channel | Off | Nota ou CC de um pedal/botão: **um toque** = para + retake, ideal com as mãos no instrumento. |
 | Advanced | Step delay | 100 ms | Espaçamento entre os passos (stop→undo→jump→record); aumente em projetos muito grandes. |
 | Advanced | Bypass launch quantization on retake | OFF | No launcher, regrava imediatamente em vez de esperar o quantize. |
 | Advanced | Show notifications | ON | Popup a cada retake. |
-| Advanced | Keep discarded takes (launcher) | OFF | Em vez de apagar, o take fica no slot e a regravação vai para o primeiro slot vazio abaixo (pseudo-comping). Sem slot vazio → sobrescreve com aviso. |
+| Advanced | Keep discarded takes (launcher) | OFF | **Só funciona no Clip Launcher** (a API não acessa clipes do arranger). Em vez de apagar, o take fica no slot e a regravação vai para o primeiro slot **abaixo** na mesma pista. Sem slot vazio → sobrescreve com aviso. Teste: ligue a opção, grave num slot do launcher, espaço-espaço → o take antigo permanece e o slot de baixo começa a gravar. |
+
+## MIDI Comping (takes por lanes)
+
+O Bitwig só tem comping para áudio. O QuickRetake implementa o equivalente MIDI possível via API: **cada volta do loop grava numa pista ("lane") diferente**, rotacionando o record-arm automaticamente na virada do loop. No fim você tem N takes completos, um por lane, e audiciona com solo exclusivo.
+
+**Setup (uma vez por instrumento):**
+
+1. Crie a pista do instrumento normalmente (com o synth/sampler).
+2. Crie 3–8 pistas de **notas vazias** (sem instrumento) — os seus lanes. Dica: agrupe-as com a pista do instrumento para organização.
+3. Em cada lane, rotear a **saída de notas** para a pista do instrumento (no Inspector/roteamento da pista: Note Out → pista do instrumento). Assim qualquer lane toca o mesmo som.
+
+**Gravando takes:**
+
+1. Selecione a região com o **loop do arranger** (as chaves de ciclo) — é ela que define o take, como você pediu.
+2. **Arme (record-arm) todos os lanes** que quiser usar.
+3. No painel **Studio I/O** (borda direita do Bitwig), na seção do QuickRetake, clique **"Start"** (MIDI Comping). A extensão: liga o loop, pula para o início dele, deixa só o lane 1 armado e começa a gravar.
+4. Toque. A cada volta do loop, o arm pula sozinho para o próximo lane — cada passada vira um take na sua própria pista (popup mostra "Comping: lane 2/4 …").
+5. Deu o número de takes que queria? **"Stop"**. (Se passar do último lane, ele volta ao 1º e a passada faz overdub por cima — o popup avisa.)
+6. Audição: **"Audition next lane"** faz solo exclusivo de um lane por vez; **"Clear solos"** limpa. Montar o take final (recortar/colar os melhores trechos entre lanes) é manual no editor — a API não move notas entre clipes do arranger.
+
+Durante o comping, os gestos de retake ficam suspensos (senão um undo engoliria todos os lanes de uma vez — a gravação em loop contínua é um passo só de undo).
 
 ## Proteções embutidas
 
